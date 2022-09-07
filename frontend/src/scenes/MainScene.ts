@@ -9,12 +9,15 @@ const PLAYER_POSITIONS = [
     { x: 22, y: 18, hx: 22, hy: 22, dx: 22, dy: 0 },
     { x: 380, y: 162 - 4, hx: 380, hy: 162, dx: 0, dy: 11 }
 ];
+
+type HandSort = "by-suit" | "by-rank";
 export default class MainScene extends Phaser.Scene implements ViewEventHandler {
     controller: TurnController;
 
     selectedCards: Card[];
     handCardImages: Phaser.GameObjects.Image[][];
     nameLabels: Phaser.GameObjects.Text[];
+    handSort: HandSort;
 
     pileImages: Phaser.GameObjects.Image[];
 
@@ -32,6 +35,7 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
         this.nameLabels = [];
         this.pileImages = [];
         this.playedImages = [];
+        this.handSort = "by-suit";
     }
 
     create() {
@@ -119,6 +123,22 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
 
         // Draw the pickup pile on top of this
         this.pileImages = this.drawPileImages(context.numberToPickup);
+
+        this.add.circle(460, 600, 20, 0xFFFFFF)
+            .setInteractive()
+            .on('pointerup', this.onCardSortChanged.bind(this));
+    }
+
+    onCardSortChanged() {
+        const cards = this.handCardImages[0].map(img => img.getData("card"));
+
+        if (this.handSort === "by-suit") {
+            this.handSort = "by-rank";
+        } else {
+            this.handSort = "by-suit";
+        }
+
+        this.drawCards(0, cards);
     }
 
     onTurnStarted(relativePlayerIndex: number, relativeNextPlayerIndex: number, aiTurn: Promise<TurnCommand>) {
@@ -215,7 +235,11 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
     drawCards(index: number, cards: Card[]): void {
         this.selectedCards = [];
 
-        cards.sort((a, b) => a.suit === b.suit ? (a.rank - b.rank) : (a.suit - b.suit));
+        if (this.handSort == "by-suit") {
+            cards.sort((a, b) => a.suit === b.suit ? (a.rank - b.rank) : (a.suit - b.suit));
+        } else {
+            cards.sort((a, b) => a.rank === b.rank ? (a.suit - b.suit) : (a.rank - b.rank));            
+        }
 
         // we must add / remove specific cards as we can see their faces
         // TODO: we can be more efficient here rather than throwing away the world and re-drawing it all
