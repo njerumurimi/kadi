@@ -66,21 +66,14 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
                 resolve(chosen);
             }
         });
-
-        // this.tweens.add({
-        //     targets: bob,
-        //     duration: 2000,
-        //     y: 650,
-        //     delay: Math.random() * 2,
-        //     ease: 'Sine.easeInOut',
-        //     repeat: -1,
-        //     yoyo: true
-        // });
     }
 
     drawPileImages(count: number) {
+        // count is always at least 1 because you can always pick up at least one card
+        // but we already have a default image displayed for this, so we only draw numbers
+        // greater than 1 (starting at index 0 so it's drawn over the card we use by default)
         const images = [];
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < count - 1; i++) {
             images.push(
                 this.add.image(this.cameras.main.centerX + (4 * i), this.cameras.main.centerY - 4, 'card_back')
                     .setOrigin(0.5, 1)
@@ -117,7 +110,10 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
         ];
 
         // Draw the main pile of cards
-        this.add.image(this.cameras.main.centerX, this.cameras.main.centerY - 4, 'card_back').setOrigin(0.5, 1);
+        this.add.image(this.cameras.main.centerX, this.cameras.main.centerY - 4, 'card_back')
+            .setOrigin(0.5, 1)
+            .setInteractive()
+            .on('pointerup', this.onPickupCards.bind(this));
 
         this.forcedSuitImage = this.add.image(this.cameras.main.centerX - 90, this.cameras.main.centerY, 'suit_spades').setVisible(false);
 

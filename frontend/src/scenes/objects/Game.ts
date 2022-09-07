@@ -196,7 +196,7 @@ export default class Game {
 
             // How many cards are being force to pick up? If toPickup is just the one
             // default card we have at every turn, then 0 are forced, otherwise stack the amounts
-            let pickupCount = this.toPickup.length === 1 ? 0 : this.toPickup.length;
+            let cardsForcedToPickupThisTurn = this.toPickup.length === 1 ? 0 : this.toPickup.length;
 
             //find the top card played
             const topPlayed = turn.played[turn.played.length - 1];
@@ -218,7 +218,7 @@ export default class Game {
 
                     const count = numberToPickup(card);
                     if (shouldStack && (count > 0) && shouldAddToPickup) {
-                        pickupCount += count;
+                        cardsForcedToPickupThisTurn += count;
                     }
 
                     if (shouldStack && (card.rank === CardRank.Queen)) {
@@ -227,7 +227,7 @@ export default class Game {
 
                     prevCard = card;
                 }
-                setPickupStack(pickupCount);
+                setPickupStack(1 + cardsForcedToPickupThisTurn);
             } else {
                 //we can clear the pickup stack, since the top card isn't special
                 setPickupStack(1);
