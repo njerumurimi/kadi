@@ -235,7 +235,7 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
     drawCards(index: number, cards: Card[]): void {
         this.selectedCards = [];
 
-        if (this.handSort == "by-suit") {
+        if (this.handSort === "by-suit") {
             cards.sort((a, b) => a.suit === b.suit ? (a.rank - b.rank) : (a.suit - b.suit));
         } else {
             cards.sort((a, b) => a.rank === b.rank ? (a.suit - b.suit) : (a.rank - b.rank));            

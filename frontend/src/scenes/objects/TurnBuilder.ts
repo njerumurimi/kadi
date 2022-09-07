@@ -188,7 +188,6 @@ export const calculateTurn = (game: GameContext) => {
         suit: game.suit
     }
 
-    // #region AI Search Tree
     const searchNodes: SearchNode[] = [];
 
     //create all parent nodes
