@@ -1,7 +1,6 @@
 import { suitAsset } from "../assets/suits";
 import { TurnController, TurnCommand, TurnEvent, ViewEventHandler, Player, Card, PlayContext, CardSuit, changesSuit, validatePlay, cardAsset, CardRank } from "./objects";
 import { Store } from 'react-notifications-component';
-import { resolve } from "path";
 
 const NAME_FONT = { color: '#ffffff', fontSize: '14px', fontFamily: "'Roboto'" };
 const PLAYER_POSITIONS = [
