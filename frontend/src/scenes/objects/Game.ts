@@ -26,9 +26,9 @@ export default class Game {
      */
     pile!: Card[];
     /**
-     * The cards that will be picked up if you draw on your turn
+     * The number of cards that will be picked up if you draw on your turn
      */
-    toPickup!: Card[];
+    forcedPickupCount!: number;
     /**
      * A list of hands that have been played. One element for each turn. Each hand consists of multiple cards
      * since you can play more than one card per turn
@@ -53,7 +53,7 @@ export default class Game {
         this.pile = [];
         this.played = [];
         this.suitChoice = CardSuit.None;
-        this.toPickup = []
+        this.forcedPickupCount = 0;
         this.turns = []
     }
 
@@ -110,7 +110,7 @@ export default class Game {
 
         // Set the cards that will be picked up if we choose to draw
         // This is just the top card from the pile to start with
-        this.toPickup.push(this.pile.shift()!);
+        this.forcedPickupCount = 0;
 
         // Notify the current player
         const meIndex = this.players.indexOf(me);
@@ -127,40 +127,40 @@ export default class Game {
     }
 
     applyTurn = (playerIndex: number, turn: TurnCommand) => {
-        const setPickupStack = (target: number) => {
-            while (this.toPickup.length > target) {
-                this.pile.push(this.toPickup.shift()!);
+        const pickupCard = () => {
+            // if the pile has run out, stuff some more cards on it!
+            if (this.pile.length === 0) {
+                this.played.forEach((turn, idx) => {
+                    // Don't add this turns cards back into the pile
+                    if (idx === this.played.length - 1) return;
+                    turn.played.forEach(card => this.pile.push(card));
+                    this.pile = this.random.shuffle(this.pile);
+                });
             }
-            while (this.toPickup.length < target) {
-                // if the pile has run out, stuff some more cards on it!
-                if (this.pile.length === 0) {
-                    this.played.forEach((turn, idx) => {
-                        // Don't add this turns cards back into the pile
-                        if (idx === this.played.length - 1) return;
-                        turn.played.forEach(card => this.pile.push(card));
-                        this.pile = this.random.shuffle(this.pile);
-                    });
-                }
-
-                this.toPickup.push(this.pile.shift()!)
-            }
+            return this.pile.shift()!;
         }
 
         let turnEvent: TurnEvent;
 
         // assume that the cards are valid
         if (turn.pickup) {
-            // pickup all cards
             const pickedUp: Card[] = [];
-            var pickup: Card | undefined = this.toPickup.shift();
-            while (pickup) {
-                this.hands[playerIndex].push(pickup);
-                pickedUp.push(pickup);
-                pickup = this.toPickup.shift();
+            if (this.forcedPickupCount > 0) {
+                // pick up all forced cards
+                for (let i = 0; i < this.forcedPickupCount; i++) {
+                    const card = pickupCard();
+                    this.hands[playerIndex].push(card);
+                    pickedUp.push(card);
+                }
+            } else {
+                // draw just a single card
+                const card = pickupCard();
+                this.hands[playerIndex].push(card);
+                pickedUp.push(card);
             }
 
             // reset the pickup pile
-            setPickupStack(1);
+            this.forcedPickupCount = 0;
 
             turnEvent = {
                 played: [],
@@ -174,29 +174,26 @@ export default class Game {
             this.suitChoice = this.suitChoice;
         } else {
 
-            // Take them frmo the players hand
+            // Take them from the players hand
             this.hands[playerIndex] = this.hands[playerIndex].filter(x => !turn.played.includes(x));
 
             // special case where you play a red jack and then a black jack on a black jack
             // which only leaves 7 cards to pick up - but this case is handled later, here
             // we just 'reset'
-            if (this.toPickup.length > 1) {
-                const topPickup = this.toPickup[this.toPickup.length - 1];
-                if ((topPickup.rank === CardRank.Jack) && (colour(topPickup.suit) === CardColour.Black)) {
-                    const firstCard = turn.played[0];
-                    if ((firstCard.rank === CardRank.Jack) && (colour(firstCard.suit) === CardColour.Red)) {
+            if (this.forcedPickupCount > 0) {
+                const lastPlayed = this.played[this.played.length - 1].played;
+                const lastTopPlayed = lastPlayed[lastPlayed.length - 1];
+                if ((lastTopPlayed.rank === CardRank.Jack) && (colour(lastTopPlayed.suit) === CardColour.Black)) {
+                    const firstPlayed = turn.played[0];
+                    if ((firstPlayed.rank === CardRank.Jack) && (colour(firstPlayed.suit) === CardColour.Red)) {
                         // move our pickup pile back to our standard pile
-                        setPickupStack(1);
+                        this.forcedPickupCount = 0;
                     }
                 }
             }
 
             //reset how many queens have been played
             let queenCount = 0;
-
-            // How many cards are being force to pick up? If toPickup is just the one
-            // default card we have at every turn, then 0 are forced, otherwise stack the amounts
-            let cardsForcedToPickupThisTurn = this.toPickup.length === 1 ? 0 : this.toPickup.length;
 
             //find the top card played
             const topPlayed = turn.played[turn.played.length - 1];
@@ -205,20 +202,21 @@ export default class Game {
             if (isSpecial(topPlayed)) {
                 //if the top played card is a queen, then we don't pick up any cards, regardless of what else is played
                 const shouldAddToPickup = forcesPickup(topPlayed);
-                if (!shouldAddToPickup) setPickupStack(1);
+                if (!shouldAddToPickup) this.forcedPickupCount = 0;
 
                 //add all the last cards that force pickups or change direction
                 let prevCard: Card | undefined = undefined;
                 let shouldStack = true;
                 for (let i = 0; i < turn.played.length; i++) {
+                    // start at the end of cards played
                     const card = turn.played[turn.played.length - (i + 1)];
 
                     //if we are playing more than 1 card, and the previous card played doesn't stack, then stop stacking
-                    shouldStack = ((!prevCard || (prevCard.rank === card.rank)) && isSpecial(card));
+                    shouldStack = (!prevCard || (prevCard.rank === card.rank)) && isSpecial(card);
 
                     const count = numberToPickup(card);
                     if (shouldStack && (count > 0) && shouldAddToPickup) {
-                        cardsForcedToPickupThisTurn += count;
+                        this.forcedPickupCount += count;
                     }
 
                     if (shouldStack && (card.rank === CardRank.Queen)) {
@@ -227,10 +225,9 @@ export default class Game {
 
                     prevCard = card;
                 }
-                setPickupStack(1 + cardsForcedToPickupThisTurn);
             } else {
                 //we can clear the pickup stack, since the top card isn't special
-                setPickupStack(1);
+                this.forcedPickupCount = 0;
             }
 
             // played some cards
@@ -304,7 +301,7 @@ export default class Game {
         const context: GameContext = {
             currentPlayer: player,
             nextPlayer: this.nextPlayer(),
-            numberToPickup: this.toPickup.length,
+            numberToPickup: this.forcedPickupCount,
             hand: this.hands[playerIndex],
             turns: this.turns,
             history: this.played,
@@ -321,7 +318,7 @@ export default class Game {
         const nextContext: GameContext = {
             currentPlayer: current,
             nextPlayer: next,
-            numberToPickup: this.toPickup.length,
+            numberToPickup: this.forcedPickupCount,
             hand: this.hands[this.players.indexOf(current)],
             turns: this.turns,
             history: this.played,

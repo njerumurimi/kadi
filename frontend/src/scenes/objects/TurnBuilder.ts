@@ -48,7 +48,7 @@ export const validatePlay = (play: Card[], context: PlayContext) => {
 const validateFirstCard = (card: Card, context: PlayContext) => {
     const lastCard = context.lastCard;
 
-    if (context.numberToPickup > 1) {
+    if (context.numberToPickup > 0) {
         // card MUST cancel or stack
         // therefore we must play the same rank as the last card in the played stack
         if (card.rank === lastCard.rank) {
@@ -128,6 +128,15 @@ const validateCardList = (cards: Card[]) => {
 }
 
 const bestPlay = (playable: Card[][], game: GameContext) => {
+
+    // TODO: implement some more rules:
+    // If we might prevent the next player from winning
+    //  * force them to pickup cards
+    //  * change direction if they have 2 cards
+    //  * change suit to something we know they don't have
+    // If we can change directions to player with more cards to go after us
+    // Only play one change suit card
+    // Maximise the number of cards we force others to pickup
 
     let maxLength: Card[] = [];
     playable.forEach(cards => {

@@ -136,7 +136,7 @@ export class TurnController implements TurnController {
         const lastPlayedCards = this.game.played[this.game.played.length - 1].played;
         const playContext = {
             lastCard: lastPlayedCards[lastPlayedCards.length - 1],
-            numberToPickup: 1,
+            numberToPickup: this.game.forcedPickupCount,
             suit: CardSuit.None
         } as PlayContext;
         this.viewEventHandler.onCardsDealt(hand, handCounts, names, playContext);

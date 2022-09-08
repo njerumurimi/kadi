@@ -73,11 +73,8 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
     }
 
     drawPileImages(count: number) {
-        // count is always at least 1 because you can always pick up at least one card
-        // but we already have a default image displayed for this, so we only draw numbers
-        // greater than 1 (starting at index 0 so it's drawn over the card we use by default)
         const images = [];
-        for (let i = 0; i < count - 1; i++) {
+        for (let i = 0; i < count; i++) {
             images.push(
                 this.add.image(this.cameras.main.centerX + (4 * i), this.cameras.main.centerY - 4, 'card_back')
                     .setOrigin(0.5, 1)
