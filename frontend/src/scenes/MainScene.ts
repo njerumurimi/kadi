@@ -24,7 +24,8 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
     storedTurnCallback: ((turn: TurnCommand) => void) | undefined;
     playContext?: PlayContext;
     playedImages: Phaser.GameObjects.Image[];
-    forcedSuitImage!: Phaser.GameObjects.Image;
+    forcedSuitImage: Phaser.GameObjects.Image | undefined;
+    awaitingSuitChange: boolean;
 
     constructor() {
         super({ key: 'MainScene' });
@@ -36,6 +37,7 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
         this.pileImages = [];
         this.playedImages = [];
         this.handSort = "by-suit";
+        this.awaitingSuitChange = false;
     }
 
     create() {
@@ -92,6 +94,7 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
         this.handCardImages = new Array(handCounts.length).fill(undefined).map(_ => []);
         this.nameLabels = new Array(handCounts.length).fill(undefined);
         this.playContext = context;
+        this.awaitingSuitChange = false;
 
         // Draw players cards
         // handCounts starts with us at index 0 and goes around clockwise all players, same as names
@@ -116,7 +119,10 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
             .setInteractive()
             .on('pointerup', this.onPickupCards.bind(this));
 
-        this.forcedSuitImage = this.add.image(this.cameras.main.centerX - 90, this.cameras.main.centerY, 'suit_spades').setVisible(false);
+        if (!this.forcedSuitImage) {
+            this.forcedSuitImage = this.add.image(this.cameras.main.centerX - 90, this.cameras.main.centerY, 'suit_spades');
+        }
+        this.forcedSuitImage.setVisible(false);
 
         // Draw the pickup pile on top of this
         this.pileImages = this.drawPileImages(context.numberToPickup);
@@ -180,9 +186,9 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
         // Update the forced suit image
         const forcedSuitTexture = suitAsset(context.suit);
         if (forcedSuitTexture) {
-            this.forcedSuitImage.setTexture(forcedSuitTexture).setVisible(true);
+            this.forcedSuitImage?.setTexture(forcedSuitTexture).setVisible(true);
         } else {
-            this.forcedSuitImage.setVisible(false);
+            this.forcedSuitImage?.setVisible(false);
         }
 
         // Update the forced pickup pile count
@@ -210,15 +216,25 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
 
     onCardSelected(card: Card, image: Phaser.GameObjects.Image): void {
         if (!this.storedTurnCallback) return;
+        // Not allowed to change cards whilst choosing suit
+        if (this.awaitingSuitChange) return;
 
         const index = this.selectedCards.indexOf(card);
         if (index >= 0) {
             // already selected, so remove everything past this point
-            this.handCardImages[0].forEach(img => img.clearTint());
+            this.handCardImages[0].forEach(img => this.setCardImageSelected(img, false));
             this.selectedCards = [];
         } else {
-            image.setTint(0xFF0000, 0xFF0000, 0xFF00FF, 0xFFFF00);
+            this.setCardImageSelected(image, true);
             this.selectedCards.push(card);
+        }
+    }
+
+    setCardImageSelected(image: Phaser.GameObjects.Image, selected: boolean) {
+        if (selected) {
+            image.setTint(0xFF0000, 0xFF0000, 0xFF00FF, 0xFFFF00);
+        } else {
+            image.clearTint();
         }
     }
 
@@ -230,12 +246,10 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
     }
 
     drawCards(index: number, cards: Card[]): void {
-        this.selectedCards = [];
-
         if (this.handSort === "by-suit") {
             cards.sort((a, b) => a.suit === b.suit ? (a.rank - b.rank) : (a.suit - b.suit));
         } else {
-            cards.sort((a, b) => a.rank === b.rank ? (a.suit - b.suit) : (a.rank - b.rank));            
+            cards.sort((a, b) => a.rank === b.rank ? (a.suit - b.suit) : (a.rank - b.rank));
         }
 
         // we must add / remove specific cards as we can see their faces
@@ -254,6 +268,13 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
             if (index === 0) {
                 image.setInteractive().on('pointerup', () => this.onCardSelected(card, image));
             }
+
+            if (this.selectedCards.indexOf(card) >= 0) {
+                this.setCardImageSelected(image, true);
+            } else {
+                this.setCardImageSelected(image, false);
+            }
+
             return image;
         });
     }
@@ -295,7 +316,9 @@ export default class MainScene extends Phaser.Scene implements ViewEventHandler 
 
             let suit = CardSuit.None;
             if (promptForSuitChange) {
+                this.awaitingSuitChange = true;
                 suit = await this.promptForSuitChange();
+                this.awaitingSuitChange = false;
             }
             this.storedTurnCallback({
                 pickup: false,
