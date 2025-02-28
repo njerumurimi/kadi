@@ -27,3 +27,95 @@ winningPlayer = () => {
 - It retrieves the last played card.
 - If the last played card is not a special card (Ace, 2, 3, 8, Queen, King, Jack, or Joker), the player is declared the winner.
 - Otherwise, the game continues (the player may need to draw a card next turn).
+
+To implement the rule where a player who plays their final card and it's a special card becomes *cardless* until their next turn (preventing others from winning until no players are cardless), you can introduce a `cardlessPlayers` state. Here's how you can do it:
+
+### **Steps to Modify `Game.ts`**
+1. **Add a `cardlessPlayers` array** to track players who have played their last card but must wait until their next turn.
+2. **Modify `applyTurn`** to detect when a player plays their final card and it's a special card.
+3. **Modify `isFinished` and `winningPlayer`** to ensure that the game doesn't end if a player is *cardless*.
+4. **Modify `changeTurns`** to remove a player from the `cardlessPlayers` list when it's their turn again.
+
+---
+
+### **1. Add a `cardlessPlayers` state**
+In the `Game` class, add this to track cardless players:
+```ts
+cardlessPlayers: Set<Player>;
+```
+Initialize it in the `reset` function:
+```ts
+this.cardlessPlayers = new Set();
+```
+
+---
+
+### **2. Modify `applyTurn` to handle special cards for last card**
+Modify the part where a player plays a card:
+```ts
+if (this.hands[playerIndex].length === 0) {
+    if (isSpecial(topPlayed)) {
+        // Player is now cardless and must wait until their next turn to be considered a winner
+        this.cardlessPlayers.add(this.players[playerIndex]);
+    }
+}
+```
+
+---
+
+### **3. Modify `isFinished` and `winningPlayer` to account for cardless players**
+Update `winningPlayer` to check if *no one is cardless* before declaring a winner:
+```ts
+winningPlayer = () => {
+    if (this.cardlessPlayers.size > 0) return null; // Don't allow a win if any players are cardless
+
+    const winnerIndex = this.hands.findIndex(hand => hand.length === 0);
+    if (winnerIndex >= 0) return this.players[winnerIndex];
+
+    return null;
+};
+```
+
+Modify `isFinished`:
+```ts
+isFinished = () => {
+    return this.winningPlayer() !== null;
+};
+```
+
+---
+
+### **4. Modify `changeTurns` to remove a player from `cardlessPlayers`**
+Ensure a cardless player is removed when their turn comes again:
+```ts
+changeTurns(changeDirection: boolean) {
+    if (!this.isFinished()) {
+        const currentPlayer = this.turns.shift()!;
+
+        // Remove from cardless players if they were in that state
+        this.cardlessPlayers.delete(currentPlayer);
+
+        if (changeDirection) {
+            this.direction = this.oppositeDirection(this.direction);
+            this.turns.reverse().push(currentPlayer);
+        } else {
+            this.turns.push(currentPlayer);
+        }
+    }
+
+    return {
+        current: this.turns[0],
+        next: this.turns[1]
+    };
+}
+```
+
+---
+
+### **Final Thoughts**
+This ensures:
+1. A player who plays their final card as a special card **must wait until their next turn** before they are considered a winner.
+2. No other player can win while at least one player is cardless.
+3. Once their turn comes back, they are removed from `cardlessPlayers` and can be considered a winner.
+
+This should work smoothly with your existing game logic. Let me know if you need any refinements!
