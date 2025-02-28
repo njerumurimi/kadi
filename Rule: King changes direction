@@ -45,3 +45,57 @@ if (directionChange) {
 2. **Update direction change logic** in `game.ts` to trigger on `CardRank.King` instead of `CardRank.Queen`.
 
 This ensures that playing a **King** will now reverse the direction of play.
+
+To change the game so that **King** (instead of **Queen**) reverses the direction of play, you need to modify the logic where the **Queen** is currently handling direction changes. Here’s what needs to be updated:
+
+### **Changes to Make**
+1. **Modify the `applyTurn` function**  
+   - Find the section where it checks if a **Queen** is played and changes direction.
+   - Replace **Queen** with **King**.
+
+2. **Ensure the `changeTurns` function works with Kings instead of Queens**  
+   - When checking if direction should change, use **King**.
+
+---
+
+### **Modified Code in `applyTurn`**
+Find this section:
+```ts
+// reset how many queens have been played
+let queenCount = 0;
+```
+Change `queenCount` to `kingCount`:
+```ts
+// reset how many kings have been played
+let kingCount = 0;
+```
+
+---
+
+Find this part:
+```ts
+if (shouldStack && (card.rank === CardRank.Queen)) {
+    queenCount++;
+}
+```
+Change `Queen` to `King`:
+```ts
+if (shouldStack && (card.rank === CardRank.King)) {
+    kingCount++;
+}
+```
+
+---
+
+Find this:
+```ts
+directionChanged: (queenCount % 2) > 0
+```
+Change `queenCount` to `kingCount`:
+```ts
+directionChanged: (kingCount % 2) > 0
+```
+
+---
+
+This ensures that **Kings** now reverse direction instead of **Queens**. Let me know if you need any further adjustments!
