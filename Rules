@@ -136,3 +136,69 @@ applyTurn = (playerIndex: number, turn: TurnCommand) => {
 
     return turnEvent;
 };
+
+
+Modify validateFirstCard
+In the section where a player is required to pick up cards (context.numberToPickup > 0), you currently only allow playing the same rank to stack. You need to add a condition that allows playing an Ace to cancel the pickup.
+
+Update:
+
+const validateFirstCard = (card: Card, context: PlayContext) => {
+    const lastCard = context.lastCard;
+if (context.numberToPickup > 0), you currently only allow playing the same rank to stack. You need to add a condition that allows playing an Ace to cancel the pickup.
+
+Update:
+
+const validateFirstCard = (card: Card, context: PlayContext) => {
+    const lastCard = context.lastCard;
+
+    if (context.numberToPickup > 0) {
+        // If an Ace is played, cancel the pickup
+        if (card.rank === CardRank.Ace) {
+            return []; // Ace cancels the pickup
+        }
+
+        // Otherwise, card MUST cancel or stack
+        if (card.rank === lastCard.rank) {
+            return [];
+        } else {
+            return [`You are being forced to pick up cards. You must play a ${rankName(lastCard.rank)} or an Ace.`];
+        }
+    } 
+    // (Rest of your existing code remains unchanged)
+Modify calculateTurn
+You also need to modify calculateTurn to ensure that if an Ace is available, the AI prioritizes it when deciding the best move.
+
+Update:
+Modify the bestPlay function:
+
+ts
+Copy
+Edit
+
+const bestPlay = (playable: Card[][], game: GameContext) => {
+    let bestMove: Card[] = [];
+
+    playable.forEach(cards => {
+        // Prioritize playing an Ace to cancel a pickup
+        if (cards.some(card => card.rank === CardRank.Ace)) {
+            bestMove = cards;
+        }
+        // Otherwise, pick the longest sequence
+        if (cards.length > bestMove.length) {
+            bestMove = cards;
+        }
+    });
+
+    const topCard = bestMove[bestMove.length - 1];
+    let suit = CardSuit.None;
+    if (changesSuit(topCard)) {
+        suit = bestSuit(game);
+    }
+
+    return {
+        played: bestMove,
+        suit: suit,
+        pickup: false
+    } as TurnCommand;
+};
