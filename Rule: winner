@@ -1,0 +1,29 @@
+You need to modify the `winningPlayer` method to ensure that a player can only win if their final played card is not a special card. Right now, a player wins if their hand is empty, but you want to add a check for the last played card.
+
+### Modify `winningPlayer` Method:
+Replace the current method with the following logic:
+
+```ts
+winningPlayer = () => {
+    // Find the index of the player who has emptied their hand
+    const winnerIndex = this.hands.findIndex(hand => hand.length === 0);
+
+    if (winnerIndex >= 0) {
+        // Get the last played card
+        const lastTurn = this.played[this.played.length - 1];
+        const lastCard = lastTurn?.played[lastTurn.played.length - 1];
+
+        // Only allow a win if the last card is NOT a special card
+        if (lastCard && !isSpecial(lastCard)) {
+            return this.players[winnerIndex];
+        }
+    }
+    return null;
+};
+```
+
+### Explanation:
+- The function finds the first player with an empty hand.
+- It retrieves the last played card.
+- If the last played card is not a special card (Ace, 2, 3, 8, Queen, King, Jack, or Joker), the player is declared the winner.
+- Otherwise, the game continues (the player may need to draw a card next turn).
