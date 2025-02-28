@@ -1,0 +1,24 @@
+Changes to gameCard.ts
+**Modify isSpecial to ensure Aces are recognized.
+**Modify forcesPickup so that Ace blocks forced pickup rather than adding pickups.
+//Updated isSpecial function
+
+export const isSpecial = (card: Card) => {
+    return (
+        card.rank === CardRank.Two ||
+        card.rank === CardRank.Ace ||  // Ace is special (can block forced pickups)
+        card.rank === CardRank.Queen ||
+        (card.rank === CardRank.Joker && card.suit === CardSuit.Joker) ||
+        (card.rank === CardRank.Jack && colour(card.suit) === CardColour.Black)
+    );
+};
+//Updated forcesPickup function
+
+export const forcesPickup = (card: Card) => {
+    if (card.rank === CardRank.Ace) return false;  // Ace prevents forced pickup
+    return (
+        card.rank === CardRank.Two ||
+        (card.rank === CardRank.Joker && card.suit === CardSuit.Joker) ||
+        (card.rank === CardRank.Jack && (card.suit === CardSuit.Clubs || card.suit === CardSuit.Spades))
+    );
+};
