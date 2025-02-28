@@ -1,0 +1,55 @@
+Got it. You just want to remove the rule that enforces playing consecutive ranked cards together, meaning players can still play them if they choose, but it's no longer a requirement.  
+
+This should be a simple fix—just remove the logic that checks for consecutive ranks in the validation step while keeping the rest of the card-playing mechanics intact. Do you need help locating the rule in your code, or have you already found where it enforces this restriction?
+
+
+To remove the rule that allows players to play consecutive ranked cards, we need to modify the validation logic in `validateCardList` inside **turnbuilder.ts**. The specific condition that currently allows runs of consecutive cards needs to be removed.
+
+### **Steps to modify:**
+1. **Locate `validateCardList` in turnbuilder.ts**  
+   This function currently allows sequences of consecutive cards as long as they are in order.
+   
+2. **Remove the logic that checks for consecutive runs**  
+   - The part where it checks `isWithinOne` and `isListInOrder` should be removed.
+   - Instead, only allow playing multiple cards if they are of the **same rank**.
+
+---
+
+### **Updated `validateCardList` function**
+Modify this function in `turnbuilder.ts`:
+
+```ts
+const validateCardList = (cards: Card[]) => {
+    if (cards.length === 1) return [] as string[];
+
+    let rankDiffers = false;
+    let suitDiffers = false;
+
+    let firstCard = cards[0];
+    let firstRank = firstCard.rank;
+    let firstSuit = firstCard.suit;
+
+    cards.forEach(card => {
+        if (card.rank !== firstRank) rankDiffers = true;
+        if (card.suit !== firstSuit) suitDiffers = true;
+    });
+
+    // If both suit and rank change, it's invalid
+    if (suitDiffers && rankDiffers) return ["Multiple cards must be of the same suit or rank."];
+
+    // Allow same rank cards to be played together
+    if (!rankDiffers) return [];
+
+    // Remove the logic that allows consecutive ranked cards
+    return ["You may only play multiple cards of the same rank."];
+};
+```
+
+---
+
+### **What changed?**
+- **Removed the logic** that allowed sequences of consecutive cards (e.g., 3-4-5).
+- Now, only cards of **the same rank** can be played together (e.g., 7-7-7).
+- The function now simply checks if the ranks are all the same and only allows that.
+
+With this change, players can no longer play consecutive ranked cards, ensuring they can only play multiple cards if they are **exactly the same rank**.
