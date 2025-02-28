@@ -22,3 +22,117 @@ export const forcesPickup = (card: Card) => {
         (card.rank === CardRank.Jack && (card.suit === CardSuit.Clubs || card.suit === CardSuit.Spades))
     );
 };
+
+Changes to game.ts (applyTurn function)
+You'll need to modify the applyTurn function to check if a player has an Ace when forced to pick up cards.
+
+**Modify the pickup logic to check for an Ace
+Before forcing a player to pick up cards, check if they have an Ace.
+
+If they play one Ace, reset forcedPickupCount to 0 and continue the game.
+If they play two Aces, let them choose a suit.
+2. Modify the play logic to account for two Aces
+If two Aces are played together, the player must select a new suit.
+
+//Updated applyTurn function
+
+applyTurn = (playerIndex: number, turn: TurnCommand) => {
+    const pickupCard = () => {
+        if (this.pile.length === 0) {
+            this.played.forEach((turn, idx) => {
+                if (idx === this.played.length - 1) return;
+                turn.played.forEach(card => this.pile.push(card));
+                this.pile = this.random.shuffle(this.pile);
+            });
+        }
+        return this.pile.shift()!;
+    };
+
+    let turnEvent: TurnEvent;
+
+    // --- HANDLE FORCED PICKUP ---
+    if (turn.pickup) {
+        const pickedUp: Card[] = [];
+
+        // Check if player has an Ace in hand
+        const hasAce = this.hands[playerIndex].some(card => card.rank === CardRank.Ace);
+        const acesPlayed = turn.played.filter(card => card.rank === CardRank.Ace).length;
+
+        if (this.forcedPickupCount > 0) {
+            if (acesPlayed >= 1) {
+                // One Ace blocks the pickup
+                this.forcedPickupCount = 0;
+                if (acesPlayed >= 2) {
+                    // Two Aces allow suit change
+                    this.suitChoice = turn.suit;
+                }
+            } else {
+                // No Ace, pick up cards
+                for (let i = 0; i < this.forcedPickupCount; i++) {
+                    const card = pickupCard();
+                    this.hands[playerIndex].push(card);
+                    pickedUp.push(card);
+                }
+                this.forcedPickupCount = 0; // Reset after pickup
+            }
+        } else {
+            // Normal single card draw
+            const card = pickupCard();
+            this.hands[playerIndex].push(card);
+            pickedUp.push(card);
+        }
+
+        turnEvent = {
+            played: [],
+            suit: CardSuit.None,
+            pickup: pickedUp,
+            directionChanged: false,
+        };
+        this.played.push(turnEvent);
+        return turnEvent;
+    }
+
+    // --- HANDLE PLAYED CARDS ---
+    this.hands[playerIndex] = this.hands[playerIndex].filter(x => !turn.played.includes(x));
+
+    let queenCount = 0;
+    const topPlayed = turn.played[turn.played.length - 1];
+
+    if (isSpecial(topPlayed)) {
+        const shouldAddToPickup = forcesPickup(topPlayed);
+        if (!shouldAddToPickup) this.forcedPickupCount = 0;
+
+        let prevCard: Card | undefined = undefined;
+        let shouldStack = true;
+        for (let i = 0; i < turn.played.length; i++) {
+            const card = turn.played[turn.played.length - (i + 1)];
+
+            shouldStack = (!prevCard || (prevCard.rank === card.rank)) && isSpecial(card);
+            const count = numberToPickup(card);
+            if (shouldStack && count > 0 && shouldAddToPickup) {
+                this.forcedPickupCount += count;
+            }
+            if (shouldStack && card.rank === CardRank.Queen) {
+                queenCount++;
+            }
+            prevCard = card;
+        }
+    } else {
+        this.forcedPickupCount = 0;
+    }
+
+    turnEvent = {
+        played: turn.played,
+        suit: turn.suit,
+        pickup: [],
+        directionChanged: (queenCount % 2) > 0,
+    };
+    this.played.push(turnEvent);
+
+    // Handle suit change when two Aces are played
+    if (turn.played.filter(card => card.rank === CardRank.Ace).length >= 2) {
+        this.suitChoice = turn.suit;
+    }
+
+    return turnEvent;
+};
