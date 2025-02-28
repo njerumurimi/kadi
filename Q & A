@@ -101,3 +101,124 @@ applyTurn = (playerIndex: number, turn: TurnCommand) => {
 6. **Forces a pickup if an answer is missing.**
 
 This should fully implement the rule while maintaining game integrity. Let me know if you need any refinements!
+
+Yes, we need to modify `TurnBuilder.ts` to ensure that when a **Queen (Q)** or an **Eight (8)** (a "question") is played, it follows the new rules:
+
+### **Changes Required in `TurnBuilder.ts`**
+1. **Modify `validatePlay` to ensure a question is always followed by an answer.**
+2. **Modify `calculateTurn` to ensure AI prioritizes playing a valid answer if a question is played.**
+
+---
+
+## **1. Modify `validatePlay`**
+We need to check if a **Queen or an Eight** is played and verify that at least one valid **answer** follows it.
+
+### **Update `validatePlay`**
+Modify `validatePlay` to ensure an answer follows a question:
+
+```typescript
+export const validatePlay = (play: Card[], context: PlayContext) => {
+    if (play.length === 0) return ["You must play at least one card."];
+    
+    const first = validateFirstCard(play[0], context);
+    const remaining = validateCardList(play);
+    const questionValidation = validateQuestionAnswer(play);
+
+    return first.concat(remaining).concat(questionValidation);
+};
+```
+
+### **New `validateQuestionAnswer` Function**
+```typescript
+const validateQuestionAnswer = (play: Card[]) => {
+    // Identify questions (Queens or Eights)
+    const questions = play.filter(card => card.rank === CardRank.Queen || card.rank === CardRank.Eight);
+    if (questions.length === 0) return []; // No questions, return no errors
+
+    const answers = play.filter(card => !questions.includes(card));
+
+    if (answers.length === 0) {
+        return ["If you play a Queen or an Eight, you must follow it with a valid answer."];
+    }
+
+    // The first answer must match the suit of the last question
+    const lastQuestionSuit = questions[questions.length - 1].suit;
+    if (answers[0].suit !== lastQuestionSuit) {
+        return ["The first answer must match the suit of the last question played."];
+    }
+
+    // Additional answers must all be of the same rank
+    const firstAnswerRank = answers[0].rank;
+    if (!answers.every(card => card.rank === firstAnswerRank)) {
+        return ["All answers must be of the same rank."];
+    }
+
+    return [];
+};
+```
+
+---
+
+## **2. Modify `calculateTurn`**
+When AI makes a move, it should:
+- If playing a **Queen or an Eight**, ensure it plays a valid answer.
+- If no valid answer exists, avoid playing a question to prevent picking up a card.
+
+### **Update `calculateTurn`**
+Modify `calculateTurn` to prioritize a **valid question-answer pair**:
+
+```typescript
+export const calculateTurn = (game: GameContext) => {
+    const playableDecks: Card[][] = [];
+
+    const lastCard: Card = findTopCard(game.history);
+    const context: PlayContext = {
+        lastCard: lastCard,
+        numberToPickup: game.numberToPickup,
+        suit: game.suit
+    };
+
+    const searchNodes: SearchNode[] = [];
+
+    // Create all parent nodes
+    game.hand.forEach(card => searchNodes.push({ card, parent: undefined }));
+
+    while (searchNodes.length > 0) {
+        const node: SearchNode = searchNodes.pop()!;
+        const play = cardsSoFar(node);
+
+        if (isValidPlay(play, context)) {
+            const hasQuestion = play.some(card => card.rank === CardRank.Queen || card.rank === CardRank.Eight);
+            const hasAnswer = play.some(card => card.rank !== CardRank.Queen && card.rank !== CardRank.Eight);
+            
+            // Only add plays with valid question-answer pairs
+            if (!hasQuestion || hasAnswer) {
+                playableDecks.push(play);
+            }
+        }
+    }
+
+    if (playableDecks.length > 0) {
+        return bestPlay(playableDecks, game);
+    } else {
+        return {
+            played: [],
+            suit: CardSuit.None,
+            pickup: true
+        } as TurnCommand;
+    }
+};
+```
+
+---
+
+## **Summary of Changes**
+1. **Enforce the rule in `validatePlay`**:
+   - `validateQuestionAnswer` ensures that playing a Queen or an Eight requires an answer.
+   - If no answer is given, it's an invalid move.
+
+2. **Update `calculateTurn`**:
+   - AI avoids playing questions unless it has an answer.
+   - Ensures valid plays prioritize a proper **question-answer pair**.
+
+These changes fully implement the rule in **both human and AI gameplay**. Let me know if you need any tweaks!
