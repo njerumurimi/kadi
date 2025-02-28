@@ -1,3 +1,22 @@
+Update isSpecial
+
+Ensures Aces are recognized as special cards.
+Update forcesPickup
+
+Prevents Aces from contributing to forced pickups.
+
+Modify applyTurn in game.ts
+
+If a player has an Ace, they can block forced pickups.
+If two Aces are played together, they allow a suit change.
+
+Modify validateFirstCard
+
+Allows an Ace to cancel a forced pickup.
+Modify calculateTurn (AI logic)
+
+Ensures AI prioritizes playing an Ace if available.
+
 Changes to gameCard.ts
 **Modify isSpecial to ensure Aces are recognized.
 **Modify forcesPickup so that Ace blocks forced pickup rather than adding pickups.
