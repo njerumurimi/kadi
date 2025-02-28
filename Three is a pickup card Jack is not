@@ -1,0 +1,43 @@
+To modify the game so that a **Jack does not force pickups** and a **Three forces the next player to pick up 3 cards**, follow these steps:
+
+### Changes to `card.ts`
+1. **Modify the `forcesPickup` function** to remove the Jack rule.
+2. **Modify the `numberToPickup` function** to add the rule for Three.
+
+#### Update `forcesPickup`:
+Remove the condition that forces a pickup for black Jacks.
+
+```ts
+export const forcesPickup = (card: Card) => {
+    return (
+        card.rank === CardRank.Two ||
+        (card.rank === CardRank.Joker && card.suit === CardSuit.Joker) ||
+        card.rank === CardRank.Three // Add rule for Three
+    );
+};
+```
+
+#### Update `numberToPickup`:
+Modify the function to remove the Jack's effect and add the rule for Three.
+
+```ts
+export const numberToPickup = (card: Card) => {
+    if (!forcesPickup(card)) return 0;
+    switch (card.rank) {
+        case CardRank.Two:
+            return 2;
+        case CardRank.Joker:
+            return 4;
+        case CardRank.Three: // Add rule for Three
+            return 3;
+        default:
+            return 0;
+    }
+};
+```
+
+### Result:
+- **Jacks no longer force pickups**.
+- **Threes now force the next player to pick up 3 cards**.
+
+Would you like me to update the game logic in `game.ts` as well?
