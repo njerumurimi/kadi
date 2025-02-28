@@ -41,3 +41,39 @@ export const numberToPickup = (card: Card) => {
 - **Threes now force the next player to pick up 3 cards**.
 
 Would you like me to update the game logic in `game.ts` as well?
+This section specifically deals with handling a special case where playing a **red Jack** on a **black Jack** "resets" the `forcedPickupCount`. If Jacks should no longer affect pickups, this logic is unnecessary.  
+
+
+// Take them from the players hand
+            this.hands[playerIndex] = this.hands[playerIndex].filter(x => !turn.played.includes(x));
+
+            // special case where you play a red jack and then a black jack on a black jack
+            // which only leaves 7 cards to pick up - but this case is handled later, here
+            // we just 'reset'
+            if (this.forcedPickupCount > 0) {
+                const lastPlayed = this.played[this.played.length - 1].played;
+                const lastTopPlayed = lastPlayed[lastPlayed.length - 1];
+                if ((lastTopPlayed.rank === CardRank.Jack) && (colour(lastTopPlayed.suit) === CardColour.Black)) {
+                    const firstPlayed = turn.played[0];
+                    if ((firstPlayed.rank === CardRank.Jack) && (colour(firstPlayed.suit) === CardColour.Red)) {
+                        // move our pickup pile back to our standard pile
+                        this.forcedPickupCount = 0;
+                    }
+                }
+            }
+### Changes Needed:
+1. **Remove the entire `if (this.forcedPickupCount > 0) { ... }` block**  
+   - Since Jacks are no longer pickup cards, there's no need to check for a red Jack canceling a black Jack's effect.
+  
+2. **Ensure Jacks don’t contribute to `forcedPickupCount` elsewhere**  
+   - If elsewhere in the code Jacks are increasing `forcedPickupCount`, that logic should also be removed.
+
+### Updated Code:
+```ts
+// Take them from the players hand
+this.hands[playerIndex] = this.hands[playerIndex].filter(x => !turn.played.includes(x));
+
+// Removed Jack-specific pickup logic
+```
+
+After removing this, Jacks will no longer impact the pickup mechanic at all. Do you want me to check for any other dependencies on Jacks in your game logic?
