@@ -1,0 +1,86 @@
+To implement the new Jack rule in your **game.ts**, you need to modify the turn logic to handle skipping players instead of forcing a pickup when a **black Jack (Clubs or Spades)** is played. Here’s how you can update your logic:
+
+### **Steps to Modify the Jack Rule**
+1. **Change `forcesPickup`**: Remove Jacks from forcing pickups.
+2. **Track Skipped Players**: Maintain a count of how many turns should be skipped.
+3. **Handle Jack Chaining**: Allow players to play a Jack to avoid being skipped.
+
+---
+
+### **Update `card.ts`**
+#### **1. Modify `forcesPickup` to Remove Jacks**
+Replace:
+```ts
+export const forcesPickup = (card: Card) => {
+    return ((card.rank === CardRank.Two) || ((card.rank === CardRank.Joker) && (card.suit === CardSuit.Joker)) || ((card.rank === CardRank.Jack) && ((card.suit === CardSuit.Clubs) || (card.suit === CardSuit.Spades))));
+}
+```
+With:
+```ts
+export const forcesPickup = (card: Card) => {
+    return ((card.rank === CardRank.Two) || ((card.rank === CardRank.Joker) && (card.suit === CardSuit.Joker)));
+};
+```
+---
+
+### **Update `game.ts`**
+#### **2. Add a `skippedTurns` Counter**
+Modify your `Game` class by adding:
+```ts
+/**
+ * Number of consecutive turns to skip due to Jacks
+ */
+skippedTurns!: number;
+```
+Initialize in `reset()`:
+```ts
+this.skippedTurns = 0;
+```
+---
+
+#### **3. Modify `applyTurn` to Skip Players**
+In `applyTurn`, after checking for special cards, modify the Jack handling:
+```ts
+if (topPlayed.rank === CardRank.Jack) {
+    if (colour(topPlayed.suit) === CardColour.Black) {
+        // Black Jacks skip players
+        this.skippedTurns += turn.played.length; // One Jack = 1 skip, multiple Jacks = multiple skips
+    }
+}
+```
+---
+
+#### **4. Skip Players in `nextPlayer()`**
+Modify `nextPlayer()` to account for skipping turns:
+```ts
+nextPlayer = () => {
+    if (this.skippedTurns > 0) {
+        this.skippedTurns--; // Reduce the skip count
+        return this.turns[1 + this.skippedTurns]!; // Skip the required number of turns
+    }
+    return this.turns[1]!;
+};
+```
+---
+
+#### **5. Allow Jack Chains**
+Modify `applyTurn` so that if the next player has a **Jack**, they can override the skip:
+```ts
+if (topPlayed.rank === CardRank.Jack && colour(topPlayed.suit) === CardColour.Black) {
+    const nextIndex = this.turns.indexOf(this.nextPlayer());
+    const nextPlayerHand = this.hands[nextIndex];
+    
+    if (nextPlayerHand.some(card => card.rank === CardRank.Jack)) {
+        // If the next player has a Jack, they can play it and reset the skip counter
+        this.skippedTurns = 0;
+    }
+}
+```
+---
+
+### **Final Behavior**
+- **A single Black Jack skips 1 player**.
+- **Multiple Black Jacks skip multiple players**.
+- **A player with a Jack can counter a skip by playing another Jack**.
+
+Let me know if you need any refinements!
