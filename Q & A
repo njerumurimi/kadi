@@ -1,0 +1,103 @@
+To implement this rule, we need to modify the `applyTurn` function to enforce the requirement that playing a Queen or an Eight (a "question") must be followed by an "answer." The answer must match the suit of the question or be a set of cards of the same rank where the first card matches the suit.
+
+### Steps for Implementation:
+
+1. **Identify if a "question" is played**  
+   - A card is a question if it's a Queen (`CardRank.Queen`) or an Eight (`CardRank.Eight`).
+   - If multiple questions are played, they must be of the same suit.
+
+2. **Check for a valid answer**  
+   - The first answer must match the suit of the last question.
+   - Additional answers can be of the same rank.
+   - If an answer is not provided, the player must pick up a card.
+
+3. **Modify `applyTurn` to enforce these rules**  
+   - Determine if a turn contains a question.
+   - If a question is played, ensure it is followed by a valid answer.
+   - If no answer is given, force the player to pick up a card.
+
+---
+
+### Code Implementation (Modifications to `applyTurn`)
+
+Modify `applyTurn` inside `Game.ts`:
+
+```typescript
+applyTurn = (playerIndex: number, turn: TurnCommand) => {
+    const pickupCard = () => {
+        if (this.pile.length === 0) {
+            this.played.forEach((turn, idx) => {
+                if (idx === this.played.length - 1) return;
+                turn.played.forEach(card => this.pile.push(card));
+                this.pile = this.random.shuffle(this.pile);
+            });
+        }
+        return this.pile.shift()!;
+    }
+
+    let turnEvent: TurnEvent;
+    const playedCards = turn.played;
+
+    // Identify questions (Queens and Eights)
+    const questions = playedCards.filter(card => card.rank === CardRank.Queen || card.rank === CardRank.Eight);
+    const answers = playedCards.filter(card => !questions.includes(card));
+
+    if (questions.length > 0) {
+        // Validate questions are of the same suit or follow the order rule (Queen/Eight of the same suit)
+        const questionSuits = new Set(questions.map(card => card.suit));
+        if (questionSuits.size > 2) {
+            this.eventHandler.onInvalidMove(playerIndex, "Questions must be of the same suit or match the previous question.");
+            return;
+        }
+
+        // Get the last question's suit for answer validation
+        const lastQuestionSuit = questions[questions.length - 1].suit;
+
+        // Validate answers
+        if (answers.length === 0) {
+            // No answer provided, force pickup
+            const drawnCard = pickupCard();
+            this.hands[playerIndex].push(drawnCard);
+            this.eventHandler.onCardPickedUp(playerIndex, drawnCard);
+            return;
+        } else {
+            // The first answer must match the suit of the last question
+            if (answers[0].suit !== lastQuestionSuit) {
+                this.eventHandler.onInvalidMove(playerIndex, "First answer must match the suit of the last question.");
+                return;
+            }
+
+            // Additional answers must be of the same rank
+            const firstAnswerRank = answers[0].rank;
+            if (!answers.every(card => card.rank === firstAnswerRank)) {
+                this.eventHandler.onInvalidMove(playerIndex, "All answers must be of the same rank.");
+                return;
+            }
+        }
+    }
+
+    // Proceed with normal turn processing
+    turnEvent = {
+        played: turn.played,
+        suit: this.suitChoice,
+        pickup: [],
+        directionChanged: false,
+    };
+
+    this.played.push(turnEvent);
+    this.eventHandler.onTurnPlayed(playerIndex, turnEvent);
+};
+```
+
+---
+
+### Summary of Changes:
+
+1. **Identifies if Queens or Eights (questions) are played.**
+2. **Ensures questions follow the suit-matching rule when multiple are played.**
+3. **Checks if an answer is provided.**
+4. **Validates that the first answer matches the last question’s suit.**
+5. **Ensures additional answers are of the same rank.**
+6. **Forces a pickup if an answer is missing.**
+
+This should fully implement the rule while maintaining game integrity. Let me know if you need any refinements!
