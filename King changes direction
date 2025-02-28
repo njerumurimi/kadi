@@ -1,0 +1,47 @@
+To modify the game so that a **King** (instead of a **Queen**) changes direction, you'll need to update the relevant logic in **card.ts** and **game.ts**.
+
+### **Changes in `card.ts`**
+In the function `isSpecial`, the condition that checks for a **Queen** should be changed to a **King**.
+
+#### **Before:**
+```ts
+export const isSpecial = (card: Card) => {
+    return ((card.rank === CardRank.Two) || (card.rank === CardRank.Ace) || (card.rank === CardRank.Queen) || ((card.rank === CardRank.Joker) && (card.suit === CardSuit.Joker)) || ((card.rank === CardRank.Jack) && (colour(card.suit) === CardColour.Black)));
+}
+```
+
+#### **After (Change Queen to King):**
+```ts
+export const isSpecial = (card: Card) => {
+    return ((card.rank === CardRank.Two) || (card.rank === CardRank.Ace) || (card.rank === CardRank.King) || ((card.rank === CardRank.Joker) && (card.suit === CardSuit.Joker)) || ((card.rank === CardRank.Jack) && (colour(card.suit) === CardColour.Black)));
+}
+```
+
+---
+
+### **Changes in `game.ts`**
+In `applyTurn`, where the direction change logic is handled, modify the check from `CardRank.Queen` to `CardRank.King`.
+
+#### **Before:**
+```ts
+const directionChange = turn.played.some(card => card.rank === CardRank.Queen);
+if (directionChange) {
+    this.direction = this.direction === PlayDirection.Clockwise ? PlayDirection.AntiClockwise : PlayDirection.Clockwise;
+}
+```
+
+#### **After (Change Queen to King):**
+```ts
+const directionChange = turn.played.some(card => card.rank === CardRank.King);
+if (directionChange) {
+    this.direction = this.direction === PlayDirection.Clockwise ? PlayDirection.AntiClockwise : PlayDirection.Clockwise;
+}
+```
+
+---
+
+### **Summary of Changes**
+1. **Update `isSpecial`** in `card.ts` to check for `CardRank.King` instead of `CardRank.Queen`.
+2. **Update direction change logic** in `game.ts` to trigger on `CardRank.King` instead of `CardRank.Queen`.
+
+This ensures that playing a **King** will now reverse the direction of play.
