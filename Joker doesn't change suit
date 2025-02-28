@@ -1,0 +1,20 @@
+To ensure that only an Ace can change the suit and not a Joker, you need to update the `changesSuit` function in `card.ts`. 
+
+### Update `changesSuit` function:
+#### **Before**
+```ts
+export const changesSuit = (card: Card) => {
+    return (((card.rank === CardRank.Joker) && (card.suit === CardSuit.Joker)) || (card.rank === CardRank.Ace));
+}
+```
+#### **After**
+```ts
+export const changesSuit = (card: Card) => {
+    return card.rank === CardRank.Ace;
+}
+```
+### Explanation:
+- The previous function allowed both Jokers and Aces to change the suit.
+- The new function ensures **only Aces** can change the suit.
+
+This update will ensure that a Joker no longer has the ability to change suits in your game logic.
